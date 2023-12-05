@@ -1,16 +1,20 @@
-const { Client, MessageMedia, LocalAuth } = require("whatsapp-web.js");
 const express = require("express");
-const socketIO = require("socket.io");
-const qrcode = require("qrcode");
 const http = require("http");
-const fs = require("fs");
 const { phoneNumberFormatter } = require("./helpers/formatter");
+const {
+  createSessionsFileIfNotExists,
+  sessions,
+  QR_CODES,
+  createSession,
+  init,
+  destroySession,
+  getSessionsFile,
+} = require("./helpers/session-zap");
 const port = process.env.PORT || 3002;
-
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
-
+createSessionsFileIfNotExists();
+init();
 app.use(express.json());
 app.use(
   express.urlencoded({
@@ -18,150 +22,38 @@ app.use(
   })
 );
 
-app.get("/", (req, res) => {
-  res.sendFile("index-multiple-account.html", {
-    root: __dirname,
-  });
+app.get("/new/sessions", (req, res) => {
+  const sessionId = req.query.id;
+  if (!sessionId)
+    return res
+      .status(400)
+      .json({ status: false, message: "Session id is required" });
+  createSession(sessionId, "My Whatsapp Bot");
+  res.json({ qrcode: QR_CODES[sessionId] || "" });
 });
-
-const sessions = [];
-const SESSIONS_FILE = "./whatsapp-sessions.json";
-
-const createSessionsFileIfNotExists = function () {
-  if (!fs.existsSync(SESSIONS_FILE)) {
-    try {
-      fs.writeFileSync(SESSIONS_FILE, JSON.stringify([]));
-      console.log("Sessions file created successfully.");
-    } catch (err) {
-      console.log("Failed to create sessions file: ", err);
-    }
-  }
-};
-
-createSessionsFileIfNotExists();
-
-const setSessionsFile = function (sessions) {
-  fs.writeFile(SESSIONS_FILE, JSON.stringify(sessions), function (err) {
-    if (err) {
-      console.log(err);
-    }
-  });
-};
-
-const getSessionsFile = function () {
-  return JSON.parse(fs.readFileSync(SESSIONS_FILE));
-};
-
-const createSession = function (id, description) {
-  console.log("Creating session: " + id);
-  const client = new Client({
-    restartOnAuthFail: true,
-    puppeteer: {
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--single-process", // <- this one doesn't works in Windows
-        "--disable-gpu",
-      ],
-    },
-    authStrategy: new LocalAuth({
-      clientId: id,
-    }),
-  });
-
-  client.initialize();
-
-  client.on("qr", (qr) => {
-    console.log("QR RECEIVED", qr);
-    qrcode.toDataURL(qr, (err, url) => {
-      io.emit("qr", { id: id, src: url });
-      io.emit("message", { id: id, text: "QR Code received, scan please!" });
-    });
-  });
-
-  client.on("ready", () => {
-    io.emit("ready", { id: id });
-    io.emit("message", { id: id, text: "Whatsapp is ready!" });
-
-    const savedSessions = getSessionsFile();
-    const sessionIndex = savedSessions.findIndex((sess) => sess.id == id);
-    savedSessions[sessionIndex].ready = true;
-    setSessionsFile(savedSessions);
-  });
-
-  client.on("authenticated", () => {
-    io.emit("authenticated", { id: id });
-    io.emit("message", { id: id, text: "Whatsapp is authenticated!" });
-  });
-
-  client.on("auth_failure", function () {
-    io.emit("message", { id: id, text: "Auth failure, restarting..." });
-  });
-
-  client.on("disconnected", (reason) => {
-    io.emit("message", { id: id, text: "Whatsapp is disconnected!" });
-    client.destroy();
-    client.initialize();
-
-    // Menghapus pada file sessions
-    const savedSessions = getSessionsFile();
-    const sessionIndex = savedSessions.findIndex((sess) => sess.id == id);
-    savedSessions.splice(sessionIndex, 1);
-    setSessionsFile(savedSessions);
-
-    io.emit("remove-session", id);
-  });
-
-  // Tambahkan client ke sessions
-  sessions.push({
-    id: id,
-    description: description,
-    client: client,
-  });
-
-  // Menambahkan session ke file
+app.get("/sessions", (req, res) => {
   const savedSessions = getSessionsFile();
-  const sessionIndex = savedSessions.findIndex((sess) => sess.id == id);
-
-  if (sessionIndex == -1) {
-    savedSessions.push({
-      id: id,
-      description: description,
-      ready: false,
-    });
-    setSessionsFile(savedSessions);
-  }
-};
-
-const init = function (socket) {
+  res.json({ data: savedSessions });
+});
+app.get("/sessions/:id", (req, res) => {
+  const sessionId = req.params.id;
   const savedSessions = getSessionsFile();
-
-  if (savedSessions.length > 0) {
-    if (socket) {
-      socket.emit("init", savedSessions);
-    } else {
-      savedSessions.forEach((sess) => {
-        createSession(sess.id, sess.description);
-      });
-    }
+  const session = savedSessions.find((sess) => sess.id == sessionId);
+  res.json({ data: session || {} });
+});
+app.delete("/sessions/:id", (req, res) => {
+  const sessionId = req.params.id;
+  if (!sessionId)
+    return res
+      .status(400)
+      .json({ status: false, message: "Session id is required" });
+  const hasRemoved = destroySession(sessionId);
+  if (!hasRemoved) {
+    return res
+      .status(400)
+      .json({ status: false, message: "Session id not found" });
   }
-};
-
-init();
-
-// Socket IO
-io.on("connection", function (socket) {
-  init(socket);
-
-  socket.on("create-session", function (data) {
-    console.log("Create session: " + data.id);
-    createSession(data.id, data.description);
-  });
+  res.json({ status: true, message: "Session was removed" });
 });
 
 // Send message
@@ -169,7 +61,6 @@ app.post("/send-message", async (req, res) => {
   const sender = req.body.sender;
   const number = phoneNumberFormatter(req.body.number);
   const message = req.body.message;
-
   const client = sessions.find((sess) => sess.id == sender)?.client;
 
   // Make sure the sender is exists & ready
