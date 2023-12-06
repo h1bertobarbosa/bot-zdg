@@ -51,8 +51,10 @@ const createSession = function (id, description) {
 
   client.on("qr", (qr) => {
     console.log("QR RECEIVED", qr);
-    qrcode.generate(qr, { small: true });
-    QR_CODES[id] = qr;
+    qrcode.toDataURL(qr, (err, url) => {
+      QR_CODES[id] = url;
+    });
+    // qrcode.generate(qr, { small: true });
   });
 
   client.on("ready", () => {

@@ -28,7 +28,9 @@ app.get("/new/sessions", (req, res) => {
     return res
       .status(400)
       .json({ status: false, message: "Session id is required" });
-  createSession(sessionId, "My Whatsapp Bot");
+  if (!QR_CODES[sessionId]) {
+    createSession(sessionId, "My Whatsapp Bot");
+  }
   res.json({ qrcode: QR_CODES[sessionId] || "" });
 });
 app.get("/sessions", (req, res) => {
