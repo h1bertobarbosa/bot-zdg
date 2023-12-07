@@ -1,6 +1,6 @@
 const fs = require("fs");
 const { Client, LocalAuth } = require("whatsapp-web.js");
-const qrcode = require("qrcode-terminal");
+const qrcode = require("qrcode");
 const SESSIONS_FILE = "./whatsapp-sessions.json";
 const sessions = [];
 const QR_CODES = {};
