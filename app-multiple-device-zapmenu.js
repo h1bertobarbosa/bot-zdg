@@ -4,7 +4,7 @@ const { phoneNumberFormatter } = require("./helpers/formatter");
 const {
   createSessionsFileIfNotExists,
   sessions,
-  getQR,
+  QR_CODES,
   createSession,
   init,
   destroySession,
@@ -29,10 +29,11 @@ app.get("/new/sessions", (req, res) => {
       .status(400)
       .json({ status: false, message: "Session id is required" });
   const qrcode = getQR(sessionId);
-
-  createSession(sessionId, "My Whatsapp Bot");
-
-  res.json({ qrcode: qrcode || "" });
+  if (!qrcode) {
+    createSession(sessionId, "My Whatsapp Bot");
+  }
+  console.log(qrcode);
+  res.json({ qrcode });
 });
 app.get("/sessions", (req, res) => {
   const savedSessions = getSessionsFile();
