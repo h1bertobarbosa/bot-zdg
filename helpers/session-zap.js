@@ -129,6 +129,9 @@ const destroySession = function (id) {
   setSessionsFile(savedSessions);
   return true;
 };
+const getQR = function (id) {
+  return QR_CODES[id];
+};
 module.exports = {
   createSessionsFileIfNotExists,
   SESSIONS_FILE,
@@ -137,6 +140,6 @@ module.exports = {
   createSession,
   init,
   sessions,
-  QR_CODES,
+  getQR,
   destroySession,
 };
