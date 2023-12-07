@@ -4,7 +4,7 @@ const { phoneNumberFormatter } = require("./helpers/formatter");
 const {
   createSessionsFileIfNotExists,
   sessions,
-  QR_CODES,
+  getQR,
   createSession,
   init,
   destroySession,
