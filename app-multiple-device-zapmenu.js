@@ -1,5 +1,5 @@
 const express = require("express");
-const http = require("http");
+const cors = require("cors");
 const { phoneNumberFormatter } = require("./helpers/formatter");
 const {
   createSessionsFileIfNotExists,
@@ -12,15 +12,20 @@ const {
 } = require("./helpers/session-zap");
 const port = process.env.PORT || 3002;
 const app = express();
-const server = http.createServer(app);
-createSessionsFileIfNotExists();
-init();
+app.use(
+  cors({
+    origin: "*",
+    optionsSuccessStatus: 200,
+  })
+);
 app.use(express.json());
 app.use(
   express.urlencoded({
     extended: true,
   })
 );
+createSessionsFileIfNotExists();
+init();
 
 app.get("/new/sessions", (req, res) => {
   const sessionId = req.query.id;
@@ -107,6 +112,6 @@ app.post("/send-message", async (req, res) => {
     });
 });
 
-server.listen(port, function () {
+app.listen(port, function () {
   console.log("App running on *: " + port);
 });

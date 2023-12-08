@@ -1,0 +1,103 @@
+{
+	"info": {
+		"_postman_id": "f2fd095d-24ae-41a5-954e-2a4c1d4a4c30",
+		"name": "New Collection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "20815928"
+	},
+	"item": [
+		{
+			"name": "New Session",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-Key",
+						"value": "asdasd",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "https://apizap.humbertoob.com.br/new/sessions?id=1234",
+					"protocol": "https",
+					"host": [
+						"apizap",
+						"humbertoob",
+						"com",
+						"br"
+					],
+					"path": [
+						"new",
+						"sessions"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "1234"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List Sessions",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://apizap.humbertoob.com.br/sessions",
+					"protocol": "https",
+					"host": [
+						"apizap",
+						"humbertoob",
+						"com",
+						"br"
+					],
+					"path": [
+						"sessions"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Send Message",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"sender\": \"1234\",\n    \"number\": \"12252001777\",\n    \"message\": \"oi\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://apizap.humbertoob.com.br/send-message",
+					"protocol": "https",
+					"host": [
+						"apizap",
+						"humbertoob",
+						"com",
+						"br"
+					],
+					"path": [
+						"send-message"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Remove Session",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		}
+	]
+}
